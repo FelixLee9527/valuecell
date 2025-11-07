@@ -38,8 +38,16 @@ bash start.sh
 **访问地址**:
 - Web UI: http://localhost:1420
 - 后端 API: http://localhost:8000
-- API 文档: http://localhost:8000/docs
+- API 文档 (Swagger): http://localhost:8000/docs
+- API 文档 (ReDoc): http://localhost:8000/redoc
 - 日志: `logs/{timestamp}/`
+
+**主要 API 端点**:
+- `POST /api/chat/send` - 发送消息给智能体
+- `GET /api/chat/stream` - 流式接收智能体响应 (SSE)
+- `GET /api/conversations` - 获取对话列表
+- `GET /api/conversations/{id}` - 获取特定对话详情
+- `GET /api/agents` - 获取可用智能体列表
 
 ### Python 后端开发
 
@@ -68,7 +76,15 @@ pytest                    # 运行所有测试
 pytest --cov             # 生成覆盖率报告
 pytest path/to/test.py   # 运行单个测试文件
 pytest -k test_name      # 运行特定测试
+pytest -v                # 详细输出模式
+pytest --tb=short        # 简短的错误回溯
+
+# 测试覆盖率差异
+pytest --cov --cov-report=xml
+diff-cover coverage.xml  # 检查代码变更的覆盖率
 ```
+
+**测试排除目录**: pytest 自动排除 `.venv`, `venv`, `build`, `dist`, `logs`, `third_party`, `examples`, `docs` 目录。
 
 **重要**: 所有 Python 操作必须使用 `uv`，禁止使用 `pip`、`poetry`、`conda`、`python3`、`python` 命令。
 
@@ -83,10 +99,17 @@ cd frontend
 bun install              # 安装依赖
 
 # 开发
-bun run dev              # 启动开发服务器
+bun run dev              # 启动开发服务器 (默认端口: 1420)
 bun run build            # 生产构建
 bun run typecheck        # TypeScript 类型检查
+
+# 代码质量检查 (使用 Biome)
+bun run lint             # 代码检查 (仅报错)
 bun run lint:fix         # 代码检查和自动修复
+bun run format           # 格式检查 (仅报错)
+bun run format:fix       # 格式化代码
+bun run check            # 检查 (lint + format)
+bun run check:fix        # 自动修复 (lint + format)
 ```
 
 **重要**: 所有前端操作必须使用 `bun`，禁止使用 `npm`、`yarn`、`pnpm`。
@@ -205,6 +228,14 @@ frontend/
 cp .env.example .env
 
 # 编辑 .env 添加必要的 API 密钥
+# Linux/macOS: 使用 nano, vim, 或其他编辑器
+# Windows: 使用 notepad 或 VS Code
+```
+
+**环境变量验证**:
+```bash
+# 验证环境变量是否正确加载 (在 python/ 目录下)
+uv run python -c "from valuecell.server.config.settings import get_settings; print(get_settings())"
 ```
 
 **必需配置**:
@@ -288,6 +319,22 @@ cp .env.example .env
 5. **注册连接**: 使用 `core/agent/connect.py` 进行注册和路由
 6. **A2A 集成**: 定义任务和消息模式，使用 `a2a-sdk`
 
+### 启动特定智能体
+
+```bash
+# 使用交互式启动器
+uv run --with questionary scripts/launch.py
+
+# 直接启动特定智能体
+uv run --env-file ../.env -m valuecell.agents.research_agent
+uv run --env-file ../.env -m valuecell.agents.auto_trading_agent
+uv run --env-file ../.env -m valuecell.agents.news_agent
+
+# 启动第三方智能体
+cd third_party/ai-hedge-fund
+uv run --env-file ../../.env -m adapter --analyst warren_buffett
+```
+
 ### 智能体类型
 
 - **SuperAgent**: 快速分类和上下文充实
@@ -299,10 +346,30 @@ cp .env.example .env
 
 ## 日志和调试
 
+### 日志位置和结构
+
 - 所有日志输出到 `logs/{timestamp}/` 目录
-- 每个智能体一个日志文件
+- 每个智能体一个日志文件,例如:
+  - `logs/2025-01-15_10-30-45/ResearchAgent.log`
+  - `logs/2025-01-15_10-30-45/AutoTradingAgent.log`
+  - `logs/2025-01-15_10-30-45/NewsAgent.log`
 - 使用 `loguru` 进行结构化日志
 - 日志在启动脚本中自动配置
+
+### 调试技巧
+
+```bash
+# 实时查看特定智能体的日志 (Linux/macOS)
+tail -f logs/*/ResearchAgent.log
+
+# Windows PowerShell
+Get-Content logs\*\ResearchAgent.log -Wait -Tail 50
+
+# 搜索特定错误
+grep -r "ERROR" logs/
+# Windows PowerShell
+Select-String -Path "logs\*\*.log" -Pattern "ERROR"
+```
 
 ## 数据存储
 
@@ -310,10 +377,26 @@ cp .env.example .env
 - **向量知识库**: LanceDB (`.lancedb/` 目录)
 - **日志**: 按时间戳保存到 `logs/` 目录
 
-**注意**: 如果长时间未更新，可以删除这些数据库文件重新启动:
-- `lancedb/`
-- `valuecell.db`
-- `.knowledgebase/`
+### 数据库管理
+
+```bash
+# 初始化或重置数据库 (在 python/ 目录下)
+uv run valuecell/server/db/init_db.py
+
+# 检查数据库状态
+sqlite3 valuecell.db ".tables"  # 查看所有表
+sqlite3 valuecell.db "SELECT COUNT(*) FROM conversations;"  # 统计对话数
+
+# 清理和重置 (如果遇到数据库问题)
+rm -rf lancedb/ valuecell.db .knowledgebase/  # Linux/macOS
+# Windows PowerShell:
+Remove-Item -Recurse -Force lancedb/, valuecell.db, .knowledgebase/
+```
+
+**注意**: 如果长时间未更新或遇到数据库错误，可以删除这些数据库文件重新启动:
+- `lancedb/` - 向量数据库
+- `valuecell.db` - SQLite 对话数据库
+- `.knowledgebase/` - 知识库缓存
 
 ## 国际化
 
@@ -331,6 +414,53 @@ cp .env.example .env
 - 填写 `.env` 中的 `OKX_*` 凭证
 - 保持 `OKX_ALLOW_LIVE_TRADING=false` 直到纸上交易验证通过
 - 参考: [docs/OKX_SETUP.md](docs/OKX_SETUP.md)
+
+## 常见问题排查
+
+### 依赖问题
+
+```bash
+# 同步依赖失败
+cd python
+uv sync --group dev --reinstall  # 强制重新安装
+
+# 前端依赖问题
+cd frontend
+rm -rf node_modules bun.lockb  # 删除缓存
+bun install  # 重新安装
+```
+
+### 端口占用
+
+```bash
+# 检查端口占用 (Linux/macOS)
+lsof -i :8000  # 后端端口
+lsof -i :1420  # 前端端口
+
+# Windows PowerShell
+Get-NetTCPConnection -LocalPort 8000
+Get-NetTCPConnection -LocalPort 1420
+
+# 修改端口 (在 .env 文件中)
+API_PORT=8001
+# 前端端口在 frontend/vite.config.ts 中配置
+```
+
+### 智能体无响应
+
+1. 检查智能体是否正常启动: 查看 `logs/` 目录中的日志文件
+2. 验证 API 密钥: 确认 `.env` 中的 LLM 提供商密钥正确
+3. 检查网络连接: 确保可以访问外部 API (OpenRouter, OpenAI 等)
+4. 重启服务: 停止所有服务后重新运行 `start.sh` 或 `start.ps1`
+
+### 数据库错误
+
+```bash
+# 重置数据库
+cd python
+rm -rf lancedb/ valuecell.db .knowledgebase/
+uv run valuecell/server/db/init_db.py
+```
 
 ## 文档
 
