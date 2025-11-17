@@ -37,6 +37,7 @@ from .market_data import MarketDataProvider, OkxMarketDataProvider
 from .models import (
     SUPPORTED_EXCHANGES,
     SUPPORTED_NETWORKS,
+    Wallet,
     AutoTradingConfig,
     TradingRequest,
 )
@@ -1044,6 +1045,7 @@ class AutoTradingAgent(BaseAgent):
                     else None,
                     okx_margin_mode=self.okx_margin_mode,
                     okx_use_server_time=self.okx_use_server_time,
+                    wallet=Wallet(pub_key="xxx1", pri_key="xxxx2"),
                 )
 
                 # Initialize exchange adapter

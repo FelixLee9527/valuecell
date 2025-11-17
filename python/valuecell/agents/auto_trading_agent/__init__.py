@@ -16,6 +16,7 @@ Modules:
 from .agent import AutoTradingAgent
 from .market_data import MarketDataProvider, SignalGenerator
 from .models import (
+    Wallet,
     AutoTradingConfig,
     CashManagement,
     PortfolioValueSnapshot,
@@ -48,6 +49,7 @@ __all__ = [
     "SignalGenerator",
     "PortfolioDecisionManager",
     # Models
+    "Wallet",
     "AutoTradingConfig",
     "TradingRequest",
     "Position",

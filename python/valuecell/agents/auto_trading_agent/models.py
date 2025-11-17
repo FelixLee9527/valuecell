@@ -100,6 +100,16 @@ class TradingRequest(BaseModel):
             raise ValueError(f"Unsupported exchange network '{value}'")
         return lowered
 
+class Wallet(BaseModel):
+    pub_key: str = Field(
+        default="xxxxxxxpub",
+        description="public key for the wallet",
+    )
+
+    pri_key: str = Field(
+        default="xxxxxxxpri",
+        description="private key for the wallet",
+    )
 
 class AutoTradingConfig(BaseModel):
     """Configuration for auto trading agent"""
@@ -177,7 +187,8 @@ class AutoTradingConfig(BaseModel):
         default=False,
         description="Sync with OKX server time when placing orders",
     )
-
+    wallet: Wallet
+    
     @field_validator("crypto_symbols")
     @classmethod
     def validate_symbols(cls, v):
