@@ -64,7 +64,7 @@ class TradingExecutor:
         self._position_manager = PositionManager(config.initial_capital)
         self._trade_recorder = TradeRecorder()
 
-    def _build_payload(self,action: str) -> Dict[str, Any]:
+    def _build_payload(self,symbol: str,action: str) -> Dict[str, Any]:
         """Build request payload"""
         import os
         logger.info("TradingExecutor: _build_payload")
@@ -74,17 +74,18 @@ class TradingExecutor:
 
         # Get signal token from environment
         signal_token = os.getenv("OKX_SIGNAL_TOKEN", "")
-
+        instrument = symbol + "T-SWAP"
+        logger.info(f"TradingExecutor: _build_payload instrument: {instrument}")
         payload = {
             "action": action,  # ENTER_LONG, EXIT_LONG, ENTER_SHORT, EXIT_SHORT
-            "instrument": "SOL-USDT-SWAP",
+            "instrument": instrument,
             "signalToken": signal_token,
             "timestamp": timestamp,
-            "maxLag": "60",
+            "maxLag": "300",
             "orderType": "market",
             "orderPriceOffset": "",
             "investmentType": "percentage_balance",
-            "amount": "6",
+            "amount": "100",
         }
 
         return payload
@@ -238,6 +239,7 @@ class TradingExecutor:
         #    logger.error(f"Failed to execute trade for {symbol}: {e}")
         #    return None
 
+        logger.info(f"TradingExector execute_trade symbol: {symbol}")
         # Map TradeAction and TradeType to OKX signal action
         # ENTER_LONG, EXIT_LONG, ENTER_SHORT, EXIT_SHORT
         if action == TradeAction.BUY and trade_type == TradeType.LONG:
@@ -253,7 +255,7 @@ class TradingExecutor:
             return None
 
         # Build payload
-        payload = self._build_payload(okx_action)
+        payload = self._build_payload(symbol,okx_action)
 
         # Send request
         response = self._send_request(payload)
