@@ -98,25 +98,27 @@ class TradingExecutor:
         else "https://www.okx.com/algo/signal/trigger"
     )
 
-        print("=" * 60)
-        print("OKX Signal Test")
-        print("=" * 60)
-        print(f"Endpoint: {endpoint}")
-        print(f"Action: {action}")
-        print(f"Instrument: {payload.instrument}")
-        print(f"Timestamp: {payload['timestamp']}")
-        print(f"Investment Type: {payload.investment_type}")
-        print(f"Amount: {payload.amount}")
-        print(f"Order Type: {payload.order_type}")
+        logger.info("==========================================================")
+        logger.info("OKX Signal Test")
+        logger.info("==========================================================")
+        logger.info(f"Endpoint: {endpoint}")
+        logger.info(f"Action: {action}")
+        logger.info(f"Instrument: {payload["instrument"]}")
+        logger.info(f"Timestamp: {payload["timestamp"]}")
+        logger.info(f"Investment Type: {payload["investmentType"]}")
+        logger.info(f"Amount: {payload["amount"]}")
+        logger.info(f"Max Lag: {payload["maxLag"]}")
+        logger.info(f"Order Type: {payload["orderType"]}")
+        logger.info(f"Order Price Offset: {payload["orderPriceOffset"]}")
         #if args.order_price_offset:
         #    print(f"Order Price Offset: {args.order_price_offset}%")
         #print(f"Paper Trading: {'Yes' if args.paper else 'No'}")
         if proxy:
-            print(f"Proxy: {proxy}")
-        print("=" * 60)
-        print("\nPayload:")
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
-        print("\nSending request...\n")
+            logger.info(f"Proxy: {proxy}")
+        logger.info("==========================================================")
+        logger.info("\nPayload:")
+        logger.info(json.dumps(payload, indent=2, ensure_ascii=False))
+        logger.info("\nSending request...\n")
 
     def _send_request(self, payload: Dict[str, Any]) -> httpx.Response:
         """Send HTTP request to OKX"""
@@ -256,6 +258,10 @@ class TradingExecutor:
 
         # Build payload
         payload = self._build_payload(symbol,okx_action)
+
+        # Print payload
+        import os
+        self._print_request_info(okx_action,os.getenv("OKX_SIGNAL_PROXY"),os.getenv("OKX_NETWORK", "paper"),payload)
 
         # Send request
         response = self._send_request(payload)
